@@ -1,0 +1,2 @@
+async function handleMessage(sock,msg){const text=msg.message?.conversation||msg.message?.extendedTextMessage?.text||'';if(!text.startsWith('.'))return;const cmd=text.trim().split(/\s+/)[0];const replies={'.help':'ICEMAN BOT commands: .help, .ping, .status, .ai','.ping':'Pong.','.status':'Check the private ICEMAN BOT control center for live connection status.','.ai':'Use the private control center for configured AI assistance.'};const jid=msg.key?.remoteJid;if(jid&&replies[cmd])await sock.sendMessage(jid,{text:replies[cmd]});}
+module.exports={handleMessage};

@@ -1,0 +1,23 @@
+{
+  "name": "iceman-bot",
+  "version": "2.0.0",
+  "private": true,
+  "description": "ICEMAN BOT private AI learning and development control center",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check security.js && node --check settings.js && node --check ai.js && node --check practice.js && node --check whatsapp.js && node --check app.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.18",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.1.0",
+    "pino": "^9.6.0"
+  }
+}

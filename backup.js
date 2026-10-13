@@ -1,0 +1,11 @@
+const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');const {DATA_DIR,ensureDataDir,readSettings,writeSettings}=require('./settings');const {readState,writeState}=require('./store');
+function key(){return Buffer.from(process.env.SETTINGS_ENCRYPTION_KEY,'hex');}
+function encrypt(buf){const iv=crypto.randomBytes(12),c=crypto.createCipheriv('aes-256-gcm',key(),iv),d=Buffer.concat([c.update(buf),c.final()]);return Buffer.concat([Buffer.from('ICEMAN1'),iv,c.getAuthTag(),d]);}
+function decrypt(buf){if(buf.length<35||buf.subarray(0,7).toString()!=='ICEMAN1')throw Error('Invalid encrypted backup.');const d=crypto.createDecipheriv('aes-256-gcm',key(),buf.subarray(7,19));d.setAuthTag(buf.subarray(19,35));return Buffer.concat([d.update(buf.subarray(35)),d.final()]);}
+async function createBackup(){await ensureDataDir();const state=await readState(),settings=await readSettings(),snap={format:'iceman-backup-v1',createdAt:new Date().toISOString(),state,settings},buf=encrypt(Buffer.from(JSON.stringify(snap))),id=`iceman-backup-${Date.now()}.enc`,dir=path.join(DATA_DIR,'backups');await fs.mkdir(dir,{recursive:true,mode:0o700});await fs.writeFile(path.join(dir,id),buf,{mode:0o600,flag:'wx'});const meta={id,createdAt:snap.createdAt,sizeBytes:buf.length,status:'complete'};state.backupHistory=[...(state.backupHistory||[]),meta];await writeState(state);return meta;}
+async function listBackups(){return(await readState()).backupHistory||[];}
+function backupPath(id){if(!/^iceman-backup-\d+\.enc$/.test(String(id)))throw Error('Invalid backup identifier.');return path.join(DATA_DIR,'backups',id);}
+async function restoreBackup(id){const snap=JSON.parse(decrypt(await fs.readFile(backupPath(id))).toString());if(snap.format!=='iceman-backup-v1'||!snap.state||!snap.settings)throw Error('Backup contents are invalid.');await writeState(snap.state);await writeSettings(snap.settings);return{createdAt:snap.createdAt,restored:true};}
+async function deleteBackup(id){const f=backupPath(id);await fs.unlink(f);await updateHistory(id);return {deleted:true};}
+async function updateHistory(id){const {updateState}=require('./store');await updateState(s=>{s.backupHistory=(s.backupHistory||[]).filter(b=>b.id!==id);return s;});}
+module.exports={createBackup,listBackups,backupPath,restoreBackup,deleteBackup};
